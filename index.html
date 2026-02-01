@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Asansör Teklif Sistemi - V48 (Tırnak ve Profil Kesin Çözüm)</title>
+  <style>
+    /* --- TEMEL STİLLER (Korundu) --- */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh; padding: 20px;
+    }
+    .main-menu {
+      max-width: 1400px; margin: 0 auto 20px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;
+    }
+    .menu-btn {
+      padding: 15px 30px; background: white; border: none; border-radius: 10px;
+      font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .menu-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+    .menu-btn.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+    
+    .container { 
+      max-width: 1400px; margin: 0 auto; background: #fff; border-radius: 15px; 
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2); overflow: hidden; display: none;
+    }
+    .container.active { display: block; }
+    
+    .header { 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; 
+      padding: 30px; text-align: center; 
+    }
+    .header h1 { font-size: 28px; margin-bottom: 10px; }
+    
+    .content { padding: 30px; max-height: 75vh; overflow-y: auto; }
+    
+    /* --- VERİ YÖNETİMİ --- */
+    .data-management-bar {
+      background: #f1f3f5; padding: 15px; border-radius: 10px; margin-bottom: 20px;
+      display: flex; justify-content: space-between; align-items: center; border: 1px solid #dee2e6;
+    }
+    .data-info { color: #495057; font-size: 14px; }
+    .data-actions { display: flex; gap: 10px; }
+    .btn-backup { background: #17a2b8; color: white; padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; }
+    .btn-restore { background: #6f42c1; color: white; padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; }
+
+    /* --- TABLOLAR VE KARTLAR --- */
+    .tabs { display: flex; background: #f8f9fa; border-bottom: 2px solid #e9ecef; overflow-x: auto; flex-wrap: wrap; }
+    .tab { 
+      flex: 1; padding: 15px; text-align: center; cursor: pointer; border: none; 
+      background: transparent; font-weight: 600; color: #6c757d; transition: all 0.3s;
+      white-space: nowrap; min-width: 100px;
+    }
+    .tab:hover { background: #e9ecef; }
+    .tab.active { background: #fff; color: #667eea; border-bottom: 3px solid #667eea; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .upload-section { background: #f8f9fa; border: 3px dashed #667eea; border-radius: 15px; padding: 20px; text-align: center; margin-bottom: 20px; }
+    .file-input-wrapper { position: relative; display: inline-block; margin: 10px 0; }
+    .file-input-wrapper input[type="file"] { position: absolute; left: -9999px; }
+    .file-input-label { display: inline-block; padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; cursor: pointer; font-weight: 600; }
+    
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-top: 20px; }
+    .product-card { background: white; border: 2px solid #e9ecef; border-radius: 12px; padding: 20px; transition: all 0.3s; display: flex; flex-direction: column; justify-content: space-between; }
+    .product-card:hover { box-shadow: 0 5px 20px rgba(0,0,0,0.1); border-color: #667eea; transform: translateY(-3px); }
+    .product-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 2px solid #f8f9fa; }
+    .product-brand { font-size: 18px; font-weight: bold; color: #667eea; }
+    .product-price { font-size: 16px; font-weight: bold; color: #6c757d; text-decoration: line-through; }
+    
+    .discount-control { background: #f1f3f5; padding: 10px; border-radius: 8px; margin: 10px 0; display: flex; justify-content: space-between; align-items: center; }
+    .discount-control input { width: 60px; padding: 5px; border-radius: 5px; border: 1px solid #ced4da; text-align: center; font-weight: bold; }
+    .discounted-price { background: #d4edda; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; color: #28a745; }
+    
+    .alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; display: none; animation: slideIn 0.3s; }
+    .alert.show { display: block; } .alert-success { background: #d4edda; color: #155724; border-left: 4px solid #28a745; }
+    
+    .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; margin: 2px; color: white; }
+    .btn-primary { background: #667eea; } .btn-warning { background: #ffc107; color: black; } .btn-danger { background: #dc3545; } .btn-large { padding: 12px 25px; font-size: 14px; }
+
+    /* --- SİHİRBAZ STİLLERİ --- */
+    .wizard-progress { display: flex; justify-content: space-between; margin-bottom: 30px; position: relative; width: 90%; margin: 0 auto 30px; }
+    .wizard-progress::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 4px; background: #e9ecef; z-index: 1; transform: translateY(-50%); }
+    .step-indicator { position: relative; z-index: 2; background: #e9ecef; color: #6c757d; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; transition: all 0.3s; border: 4px solid #fff; }
+    .step-indicator.active { background: #667eea; color: white; transform: scale(1.1); box-shadow: 0 0 10px rgba(102, 126, 234, 0.5); }
+    .step-indicator.completed { background: #28a745; color: white; }
+    .wizard-step { display: none; animation: fadeIn 0.4s; } .wizard-step.active { display: block; }
+    .customer-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; }
+    .selection-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+    .selection-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 10px; padding: 20px; transition: all 0.3s; }
+    .selection-card:hover { border-color: #667eea; background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+    .selection-card h4 { color: #667eea; margin-bottom: 10px; }
+    .input-wrapper label { display: block; font-size: 14px; font-weight: 600; color: #495057; margin-bottom: 8px; }
+    .input-wrapper input, .input-wrapper textarea, .input-wrapper select { width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 14px; background: white; }
+    .wizard-footer { margin-top: 30px; padding-top: 20px; border-top: 2px solid #f8f9fa; display: flex; justify-content: space-between; }
+    .btn-next { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    .btn-prev { background: #e9ecef; color: #495057; padding: 12px 30px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+
+    /* MODAL */
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+    .modal-content { background-color: white; margin: 3% auto; padding: 30px; border-radius: 15px; width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #e9ecef; padding-bottom: 15px; }
+    .close-modal { font-size: 28px; font-weight: bold; cursor: pointer; background: none; border: none; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; font-weight: 600; color: #495057; margin-bottom: 8px; font-size: 14px; }
+    .form-group input, .form-group select { width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 14px; }
+    .category-fields { display: none; padding: 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e9ecef; }
+    .category-fields.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+  <div class="main-menu">
+    <button class="menu-btn active" onclick="showMainSection('priceList')">📋 Fiyat Listesi</button>
+    <button class="menu-btn" onclick="showMainSection('quotation')">💰 Teklif Hazırla</button>
+  </div>
+
+  <div id="priceListSection" class="container active">
+    <div class="header"><h1>📋 Fiyat Listesi Yönetimi</h1></div>
+    
+    <div class="content">
+      <div id="alert" class="alert"></div>
+
+      <div class="data-management-bar">
+        <div class="data-info">
+          💾 <strong>Veri Güvenliği:</strong> Veriler tarayıcıda saklanır. Yedek almayı unutmayın.
+        </div>
+        <div class="data-actions">
+          <button class="btn-backup" onclick="downloadBackup()">💾 Verileri İndir</button>
+          <input type="file" id="restoreInput" style="display:none" onchange="uploadBackup(this)">
+          <button class="btn-restore" onclick="document.getElementById('restoreInput').click()">📂 Veri Yükle</button>
+        </div>
+      </div>
+      
+      <div class="tabs">
+        <button class="tab active" onclick="showTab('motor')">🔧 Motor</button>
+        <button class="tab" onclick="showTab('kumanda')">🎛️ Kumanda</button>
+        <button class="tab" onclick="showTab('kabin')">🏠 Kabin</button>
+        <button class="tab" onclick="showTab('ray')">📏 Ray</button>
+        <button class="tab" onclick="showTab('kapilar')">🚪 Kapılar</button>
+        <button class="tab" onclick="showTab('buton')">⏺️ Buton</button>
+        <button class="tab" onclick="showTab('halat')">🔗 Halat</button>
+        <button class="tab" onclick="showTab('agirlik')">⚖️ Ağırlık</button>
+        <button class="tab" onclick="showTab('tamamlayici')">🔩 Tamamlayıcı</button>
+      </div>
+
+      <div id="motorTab" class="tab-content active"><div class="upload-section"><input type="file" id="motorIn" accept=".pdf, .xls, .xlsx" onchange="handleFileUpload('motor',this)"><label for="motorIn" class="file-input-label">📄 PDF / Excel Yükle</label><button class="btn btn-warning btn-large" onclick="addManualProduct('motor')">✏️ Manuel Ekle</button></div><div id="motorProducts"></div></div>
+      <div id="kumandaTab" class="tab-content"><div class="upload-section"><input type="file" id="kumandaIn" accept=".pdf, .xls, .xlsx" onchange="handleFileUpload('kumanda',this)"><label for="kumandaIn" class="file-input-label">📄 PDF / Excel Yükle</label><button class="btn btn-warning btn-large" onclick="addManualProduct('kumanda')">✏️ Manuel Ekle</button></div><div id="kumandaProducts"></div></div>
+      <div id="kabinTab" class="tab-content"><div class="upload-section"><input type="file" id="kabinIn" accept=".pdf, .xls, .xlsx" onchange="handleFileUpload('kabin',this)"><label for="kabinIn" class="file-input-label">📄 PDF / Excel Yükle</label><button class="btn btn-warning btn-large" onclick="addManualProduct('kabin')">✏️ Manuel Ekle</button></div><div id="kabinProducts"></div></div>
+      
+      <div id="rayTab" class="tab-content">
+        <div style="background: #e7f5ff; padding: 20px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #667eea;">
+          <h3 style="color: #667eea; margin: 0 0 10px 0;">📏 Ray Yönetimi</h3>
+          <p style="margin: 0; color: #6c757d; font-size: 14px;">
+            Ray sistemleri için tek kartta <strong>Kabin Rayı</strong> ve <strong>Ağırlık Rayı</strong> özelliklerini ve fiyatlarını ayrı ayrı girebilirsiniz.
+            Standart malzeme listesi oluşturulurken <strong>Teklif Sihirbazı'nda (Adım 3)</strong> seçtiğiniz marka kullanılır. 
+            <strong>Özellikler (Ebat)</strong> ise kapasite ve hıza göre otomatik hesaplanır.
+          </p>
+        </div>
+
+        <div class="upload-section">
+          <input type="file" id="rayIn" accept=".pdf, .xls, .xlsx" onchange="handleFileUpload('ray',this)">
+          <label for="rayIn" class="file-input-label">📄 PDF / Excel Yükle</label>
+          <button class="btn btn-warning btn-large" onclick="addManualProduct('ray')">✏️ Ray Ürünü Ekle</button>
+        </div>
+        <div id="rayProducts"></div>
+      </div>
+
+      <div id="kapilarTab" class="tab-content"><div class="upload-section"><input type="file" id="kapilarIn" accept=".pdf, .xls, .xlsx" onchange="handleFileUpload('kapilar',this)"><label for="kapilarIn" class="file-input-label">📄 PDF / Excel Yükle</label><button class="btn btn-warning btn-large" onclick="addManualProduct('kapilar')">✏️ Manuel Ekle</button></div><div id="kapilarProducts"></div></div>
+      <div id="butonTab" class="tab-content"><div class="upload-section"><input type="file" id="butonIn" accept=".pdf, .xls, .xlsx" onchange="handleFileUpload('buton',this)"><label for="butonIn" class="file-input-label">📄 PDF / Excel Yükle</label><button class="btn btn-warning btn-large" onclick="addManualProduct('buton')">✏️ Manuel Ekle</button></div><div id="butonProducts"></div></div>
+      <div id="halatTab" class="tab-content"><div class="upload-section"><input type="file" id="halatIn" accept=".pdf, .xls, .xlsx" onchange="handleFileUpload('halat',this)"><label for="halatIn" class="file-input-label">📄 PDF / Excel Yükle</label><button class="btn btn-warning btn-large" onclick="addManualProduct('halat')">✏️ Manuel Ekle</button></div><div id="halatProducts"></div></div>
+      <div id="agirlikTab" class="tab-content"><div class="upload-section"><input type="file" id="agirlikIn" accept=".pdf, .xls, .xlsx" onchange="handleFileUpload('agirlik',this)"><label for="agirlikIn" class="file-input-label">📄 PDF / Excel Yükle</label><button class="btn btn-warning btn-large" onclick="addManualProduct('agirlik')">✏️ Manuel Ekle</button></div><div id="agirlikProducts"></div></div>
+      
+      <div id="tamamlayiciTab" class="tab-content">
+        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 20px;">
+          <strong style="color: #856404;">⚠️ Önemli Not:</strong>
+          <p style="margin: 5px 0 0 0; color: #856404; font-size: 14px;">
+            Aşağıdaki isimlerde ürün eklerseniz, teklif tablosunda bu veriler (Marka/Fiyat/Özellik) otomatik kullanılır:<br>
+            <i>Çelik Dübel, Kabin Ray Konsolu, Ağırlık Ray Konsolu, Ray Mastarı, İp Atma Profili, İskele, Makine Şasesi, Motor Bağlantı Kablosu, Kabin Ray Tırnağı, Ağırlık Ray Tırnağı</i>
+          </p>
+        </div>
+        <div class="upload-section"><input type="file" id="tamamlayiciIn" accept=".pdf, .xls, .xlsx" onchange="handleFileUpload('tamamlayici',this)"><label for="tamamlayiciIn" class="file-input-label">📄 PDF / Excel Yükle</label><button class="btn btn-warning btn-large" onclick="addManualProduct('tamamlayici')">✏️ Manuel Ekle</button></div><div id="tamamlayiciProducts"></div></div>
+    </div>
+  </div>
+
+  <div id="quotationSection" class="container">
+    <div class="header"><h1>💰 Teklif Sihirbazı</h1></div>
+    <div class="content">
+      <div class="wizard-progress">
+        <div class="step-indicator active" id="p-step1">1</div>
+        <div class="step-indicator" id="p-step2">2</div>
+        <div class="step-indicator" id="p-step3">3</div>
+        <div class="step-indicator" id="p-step4">4</div>
+      </div>
+
+      <div class="wizard-step active" id="q-step1">
+        <h2 style="color:#667eea; margin-bottom:20px;">👤 Müşteri Bilgileri</h2>
+        <div class="customer-form-grid">
+          <div class="input-wrapper"><label>🏢 Firma / Şahıs İsmi</label><input type="text" id="custName"></div>
+          <div class="input-wrapper"><label>👤 Yetkili Kişi</label><input type="text" id="custAuth"></div>
+          <div class="input-wrapper"><label>📍 Müşteri Adresi</label><textarea id="custAddress" rows="2"></textarea></div>
+          <div class="input-wrapper"><label>🏗️ Proje Adresi</label><textarea id="projectAddress" rows="2"></textarea></div>
+          <div class="input-wrapper"><label>📧 E-Posta</label><input type="email" id="custEmail"></div>
+          <div class="input-wrapper"><label>📱 Cep Telefonu</label><input type="tel" id="custMobile"></div>
+          <div class="input-wrapper"><label>☎️ İş Telefonu</label><input type="tel" id="custPhone"></div>
+        </div>
+        <div class="wizard-footer" style="justify-content: flex-end;">
+          <button class="btn-next" onclick="nextStep(2)">İleri ➡️</button>
+        </div>
+      </div>
+
+      <div class="wizard-step" id="q-step2">
+        <h2 style="color:#667eea; margin-bottom:20px;">⚙️ Asansör Teknik Özellikleri</h2>
+        <div class="customer-form-grid">
+          <div class="input-wrapper"><label>⚖️ Kapasite</label><select id="techCapacity"><option value="320 kg">320 kg (4 Kişi)</option><option value="480 kg">480 kg (6 Kişi)</option><option value="630 kg">630 kg (8 Kişi)</option><option value="800 kg">800 kg (10 Kişi)</option><option value="1000 kg">1000 kg (13 Kişi)</option><option value="1250 kg">1250 kg (16 Kişi)</option><option value="1600 kg">1600 kg (21 Kişi)</option><option value="2100 kg">2100 kg (28 Kişi)</option></select></div>
+          <div class="input-wrapper"><label>🚀 Hız</label><select id="techSpeed"><option value="0,50 m/sn">0,50 m/sn</option><option value="0,80 m/sn">0,80 m/sn</option><option value="1,00 m/sn">1,00 m/sn</option><option value="1,20 m/sn">1,20 m/sn</option><option value="1,60 m/sn">1,60 m/sn</option><option value="2,00 m/sn">2,00 m/sn</option><option value="2,50 m/sn">2,50 m/sn</option></select></div>
+          <div class="input-wrapper"><label>🔢 Durak Sayısı</label><select id="techStops"></select></div>
+          <div class="input-wrapper"><label>🏢 Makina Konumu</label><select id="techType"><option value="MRL">MRL (Dairesiz)</option><option value="MR">MR (Daireli)</option></select></div>
+          <div class="input-wrapper"><label>📏 Seyir (mm)</label><input type="number" id="techDistance" placeholder="Örn: 30000"></div>
+          <div class="input-wrapper"><label>📐 Kuyu Eni (mm)</label><input type="number" id="techWidth" placeholder="Örn: 1800"></div>
+          <div class="input-wrapper"><label>📐 Kuyu Derinliği (mm)</label><input type="number" id="techDepth" placeholder="Örn: 2000"></div>
+          <div class="input-wrapper"><label>⬇️ Kuyu Dibi (mm)</label><input type="number" id="techPit" placeholder="Örn: 1400"></div>
+          <div class="input-wrapper"><label>⬆️ Son Kat (mm)</label><input type="number" id="techTop" placeholder="Örn: 3700"></div>
+        </div>
+        <div class="wizard-footer"><button class="btn-prev" onclick="prevStep(1)">⬅️ Geri</button><button class="btn-next" onclick="nextStep(3)">İleri ➡️</button></div>
+      </div>
+
+      <div class="wizard-step" id="q-step3">
+        <h2 style="color:#667eea; margin-bottom:20px;">📦 Malzeme Seçimi</h2>
+        <div class="selection-grid">
+          
+          <div class="selection-card" style="grid-column: span 2;">
+            <h4 style="display:flex; align-items:center; gap:10px;">🔧 Motor <span style="font-size:12px; font-weight:normal; color:#666;">(Kapasite/Hız/Tahrik uyumlu)</span></h4>
+            <div style="display:flex; gap:15px; flex-wrap:wrap;">
+              <div class="input-wrapper" style="flex:1; min-width:200px;">
+                <label>Marka Seçiniz</label>
+                <select id="select-motor" onchange="filterMotorModels(this.value)">
+                  <option value="">Önce Marka...</option>
+                </select>
+              </div>
+              <div class="input-wrapper" style="flex:2; min-width:300px;">
+                <label>Uygun Model Seçiniz</label>
+                <select id="select-motor-model" onchange="updateQuoteProduct('motor', this.value)" disabled style="background:#f0f0f0;">
+                  <option value="">Lütfen önce marka seçin</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="selection-card"><h4>🎛️ Kumanda</h4><div class="input-wrapper"><select id="select-kumanda" onchange="updateQuoteProduct('kumanda', this.value)"><option value="">Seçiniz...</option></select></div></div>
+          <div class="selection-card"><h4>🏠 Kabin</h4><div class="input-wrapper"><select id="select-kabin" onchange="updateQuoteProduct('kabin', this.value)"><option value="">Seçiniz...</option></select></div></div>
+          <div class="selection-card"><h4>📏 Ray</h4><div class="input-wrapper"><select id="select-ray" onchange="updateQuoteProduct('ray', this.value)"><option value="">Seçiniz...</option></select></div></div>
+          <div class="selection-card"><h4>🚪 Kapılar</h4><div class="input-wrapper"><select id="select-kapilar" onchange="updateQuoteProduct('kapilar', this.value)"><option value="">Seçiniz...</option></select></div></div>
+          <div class="selection-card"><h4>⏺️ Buton</h4><div class="input-wrapper"><select id="select-buton" onchange="updateQuoteProduct('buton', this.value)"><option value="">Seçiniz...</option></select></div></div>
+          <div class="selection-card"><h4>🔗 Halat</h4><div class="input-wrapper"><select id="select-halat" onchange="updateQuoteProduct('halat', this.value)"><option value="">Seçiniz...</option></select></div></div>
+          <div class="selection-card"><h4>⚖️ Ağırlık</h4><div class="input-wrapper"><select id="select-agirlik" onchange="updateQuoteProduct('agirlik', this.value)"><option value="">Seçiniz...</option></select></div></div>
+          <div class="selection-card"><h4>🔩 Tamamlayıcı</h4><div class="input-wrapper"><select id="select-tamamlayici" onchange="updateQuoteProduct('tamamlayici', this.value)"><option value="">Seçiniz...</option></select></div></div>
+        </div>
+        <div class="wizard-footer"><button class="btn-prev" onclick="prevStep(2)">⬅️ Geri</button><button class="btn-next" onclick="nextStep(4)">İleri ➡️</button></div>
+      </div>
+
+      <div class="wizard-step" id="q-step4">
+        <h2 style="color:#667eea; margin-bottom:20px;">📄 Maliyet Tablosu</h2>
+        
+        <div style="margin-bottom: 20px; display: flex; gap: 15px; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn btn-primary btn-large" onclick="loadSelectedProducts()">
+              🔄 Seçili Ürünleri Yükle
+            </button>
+            <button class="btn btn-primary btn-large" onclick="loadDefaultMaterials()" style="background: #17a2b8;">
+              📥 Standart Malzeme Listesini Yükle
+            </button>
+            <button class="btn btn-warning btn-large" onclick="addManualCostRow()">
+              ➕ Malzeme Ekle
+            </button>
+            <button class="btn btn-primary btn-large" onclick="addGroupRow()">
+              📁 Grup Başlığı Ekle
+            </button>
+            <button class="btn btn-danger btn-large" onclick="clearCostTable()">
+              🗑️ Tabloyu Temizle
+            </button>
+          </div>
+          <div style="background: #e7f3ff; padding: 10px 20px; border-radius: 8px; border: 2px solid #2196F3;">
+            <strong style="color: #1976D2;">Toplam Kalem:</strong> 
+            <span id="itemCount" style="font-size: 18px; font-weight: bold; color: #1565C0;">0</span>
+          </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table id="costTable" style="width:100%; border-collapse: collapse; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <thead>
+              <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <th style="padding: 15px; text-align: left; font-weight: 600; border: 1px solid #dee2e6; width: 20%;">Malzemenin Adı</th>
+                <th style="padding: 15px; text-align: left; font-weight: 600; border: 1px solid #dee2e6; width: 10%;">Ürün Markası</th>
+                <th style="padding: 15px; text-align: left; font-weight: 600; border: 1px solid #dee2e6; width: 20%;">Ürün Özelliği</th>
+                <th style="padding: 15px; text-align: center; font-weight: 600; border: 1px solid #dee2e6; width: 7%;">Mik.</th>
+                <th style="padding: 15px; text-align: center; font-weight: 600; border: 1px solid #dee2e6; width: 6%;">BR.</th>
+                <th style="padding: 15px; text-align: right; font-weight: 600; border: 1px solid #dee2e6; width: 12%;">Br. Fiyat - TL</th>
+                <th style="padding: 15px; text-align: right; font-weight: 600; border: 1px solid #dee2e6; width: 12%;">Tutarı - TL</th>
+                <th style="padding: 15px; text-align: center; font-weight: 600; border: 1px solid #dee2e6; width: 13%;">İşlem</th>
+              </tr>
+            </thead>
+            <tbody id="costTableBody">
+              <tr>
+                <td colspan="8" style="padding: 40px; text-align: center; color: #999;">
+                  Tabloya malzeme eklemek için yukarıdaki butonları kullanın
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr style="background: #fff3cd; font-weight: bold;">
+                <td colspan="6" style="padding: 12px; text-align: right; border: 1px solid #dee2e6;">TOPLAM MALİYET TL</td>
+                <td id="totalCost" style="padding: 12px; text-align: right; border: 1px solid #dee2e6; color: #856404;">0,00 TL</td>
+                <td style="border: 1px solid #dee2e6;"></td>
+              </tr>
+              <tr style="background: #d1ecf1;">
+                <td colspan="5" style="padding: 12px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">ŞİRKET GENEL GİDERLERİ %</td>
+                <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6;">
+                  <input type="number" id="overheadPercent" value="10" min="0" max="100" step="0.1" 
+                         style="width: 80px; padding: 6px; text-align: center; border: 1px solid #ced4da; border-radius: 4px; font-weight: bold;"
+                         onchange="calculateTotals()">
+                </td>
+                <td id="overheadAmount" style="padding: 12px; text-align: right; border: 1px solid #dee2e6; font-weight: 600; color: #0c5460;">0,00 TL</td>
+                <td style="border: 1px solid #dee2e6;"></td>
+              </tr>
+              <tr style="background: #cfe2ff;">
+                <td colspan="6" style="padding: 12px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">GENEL MALİYET</td>
+                <td id="generalCost" style="padding: 12px; text-align: right; border: 1px solid #dee2e6; font-weight: bold; color: #084298;">0,00 TL</td>
+                <td style="border: 1px solid #dee2e6;"></td>
+              </tr>
+              <tr style="background: #d1e7dd;">
+                <td colspan="5" style="padding: 12px; text-align: right; border: 1px solid #dee2e6; font-weight: 600;">KAR %</td>
+                <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6;">
+                  <input type="number" id="profitPercent" value="50" min="0" max="100" step="0.1"
+                         style="width: 80px; padding: 6px; text-align: center; border: 1px solid #ced4da; border-radius: 4px; font-weight: bold;"
+                         onchange="calculateTotals()">
+                </td>
+                <td id="profitAmount" style="padding: 12px; text-align: right; border: 1px solid #dee2e6; font-weight: 600; color: #0f5132;">0,00 TL</td>
+                <td style="border: 1px solid #dee2e6;"></td>
+              </tr>
+              <tr style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white;">
+                <td colspan="6" style="padding: 15px; text-align: right; border: 1px solid #dee2e6; font-weight: bold; font-size: 18px;">TEKLİF FİYATI TL</td>
+                <td id="quotationPrice" style="padding: 15px; text-align: right; border: 1px solid #dee2e6; font-weight: bold; font-size: 20px;">0,00 TL</td>
+                <td style="border: 1px solid #dee2e6;"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="wizard-footer">
+          <button class="btn-prev" onclick="prevStep(3)">⬅️ Geri</button>
+          <button class="btn-next" style="background:#28a745;" onclick="finishQuotation()">Teklifi Tamamla ✅</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2 id="modalTitle">Ürün Düzenle</h2><button class="close-modal" onclick="closeEditModal()">&times;</button></div>
+      <form id="editForm">
+        <div class="form-group"><label>🏷️ Marka</label><input type="text" id="editBrand"></div>
+        <div class="form-group" id="commonModelField"><label>📝 Model / Açıklama</label><input type="text" id="editModel"></div>
+        
+        <div id="tamamlayiciFields" class="category-fields">
+            <div class="form-group">
+                <label>📦 Tamamlayıcı Malzeme Adı</label>
+                <input type="text" id="tamamlayiciName" placeholder="Örn: Kabin Ray Konsolu">
+                <small style="color:#666;">Konsol eşleşmesi için "Kabin Ray Konsolu" veya "Ağırlık Ray Konsolu" yazınız.</small>
+            </div>
+            <div class="form-group">
+                <label>📝 Özelliği</label>
+                <input type="text" id="tamamlayiciFeature" placeholder="Örn: Standart, Güçlendirilmiş...">
+            </div>
+        </div>
+
+        <div class="form-group"><label>💯 İskonto (%)</label><input type="number" id="editDiscount" step="0.01"></div>
+
+        <div id="motorFields" class="category-fields">
+          <h4 style="color:#667eea; border-bottom:1px solid #ddd; margin-bottom:10px;">🔧 Motor</h4>
+          <div class="form-group"><label>Kapasite</label><input id="motorCapacity"></div>
+          <div class="form-group"><label>Hız</label><input id="motorSpeed"></div>
+          <div class="form-group"><label>Güç</label><input id="motorPower"></div>
+          <div class="form-group"><label>Tahrik</label><input type="text" id="motorDriveType" placeholder="Örn: MR, MRL"></div>
+          <div class="form-group"><label>Kasnak (mm)</label><input id="motorPulley"></div>
+          <div class="form-group"><label>Halat Sayısı</label><input id="motorRopeCount"></div>
+          <div class="form-group"><label>Halat Kalınlığı</label><input id="motorRopeThickness"></div>
+        </div>
+
+        <div id="rayFields" class="category-fields">
+            <h4 style="color:#667eea; border-bottom:1px solid #ddd; margin-bottom:10px;">📏 Ray Fiyatlandırma ve Özellikler</h4>
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <div class="form-group" style="flex:1;">
+                    <label>💰 Kabin Rayı Fiyatı (TL)</label>
+                    <input type="number" id="rayMainPrice" step="0.01" placeholder="0.00">
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label>💰 Ağırlık Rayı Fiyatı (TL)</label>
+                    <input type="number" id="rayWeightPrice" step="0.01" placeholder="0.00">
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex:1;">
+                    <label>📝 Ana Ray Özelliği</label>
+                    <input type="text" id="rayMainFeature" placeholder="Örn: 90x75x16">
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label>📝 Ağırlık Rayı Özelliği</label>
+                    <input type="text" id="rayWeightFeature" placeholder="Örn: 50x50x5">
+                </div>
+            </div>
+        </div>
+
+        <div id="kumandaFields" class="category-fields"><select id="kumandaDriveType"><option value="MR">MR</option></select><select id="kumandaPower"><option value="5,5 kW">5.5</option></select></div>
+        <div class="form-group" id="commonPriceField"><label>💰 Fiyat (TL)</label><input type="number" id="editPrice" step="0.01"></div>
+        
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn btn-danger btn-large" onclick="closeEditModal()">İptal</button>
+          <button type="submit" class="btn btn-primary btn-large">Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="manualRowModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2>➕ Malzeme Ekle</h2><button class="close-modal" onclick="closeManualRowModal()">&times;</button></div>
+      <form id="manualRowForm">
+        <div class="form-group"><label>📦 Malzemenin Adı</label><input type="text" id="manualMaterialName" required placeholder="Örn: Kabin Rayı, Halat, Kapı..."></div>
+        <div class="form-group"><label>🏷️ Ürün Markası</label><input type="text" id="manualBrand" placeholder="Marka adı (opsiyonel)"></div>
+        <div class="form-group"><label>📝 Ürün Özelliği</label><textarea id="manualFeature" rows="2" placeholder="Model, özellik vb. (opsiyonel)"></textarea></div>
+        <div class="form-group"><label>🔢 Miktar</label><input type="number" id="manualQuantity" step="0.01" value="1" required></div>
+        <div class="form-group"><label>📏 Birim</label><select id="manualUnit"><option value="Ad.">Ad. (Adet)</option><option value="Takım">Takım</option><option value="Mt.">Mt. (Metre)</option><option value="Kg">Kg</option><option value="M²">M²</option><option value="Lt.">Lt. (Litre)</option><option value="Pk.">Pk. (Paket)</option></select></div>
+        <div class="form-group"><label>💰 Birim Fiyat - TL</label><input type="number" id="manualUnitPrice" step="0.01" required placeholder="0.00"></div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 20px;"><button type="button" class="btn btn-danger btn-large" onclick="closeManualRowModal()">İptal</button><button type="submit" class="btn btn-primary btn-large">Ekle</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="groupRowModal" class="modal">
+    <div class="modal-content" style="max-width: 400px;">
+      <div class="modal-header"><h2>📁 Grup Başlığı Ekle</h2><button class="close-modal" onclick="closeGroupRowModal()">&times;</button></div>
+      <form id="groupRowForm">
+        <div class="form-group"><label>📌 Grup Adı</label><input type="text" id="groupName" required placeholder="Örn: RAY, KAPI, HALAT, KABİN..."></div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 20px;"><button type="button" class="btn btn-danger btn-large" onclick="closeGroupRowModal()">İptal</button><button type="submit" class="btn btn-primary btn-large">Ekle</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="editCostRowModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2>✏️ Malzeme Düzenle</h2><button class="close-modal" onclick="closeEditCostRowModal()">&times;</button></div>
+      <form id="editCostRowForm">
+        <input type="hidden" id="editRowIndex">
+        <div class="form-group"><label>📦 Malzemenin Adı</label><input type="text" id="editMaterialName" required></div>
+        <div class="form-group"><label>🏷️ Ürün Markası</label><input type="text" id="editBrandName" placeholder="Marka adı"></div>
+        <div class="form-group"><label>📝 Ürün Özelliği</label><textarea id="editFeature" rows="2" placeholder="Model, özellik vb."></textarea></div>
+        <div class="form-group"><label>🔢 Miktar</label><input type="number" id="editQuantity" step="0.01" required></div>
+        <div class="form-group"><label>📏 Birim</label><select id="editUnit"><option value="Ad.">Ad. (Adet)</option><option value="Takım">Takım</option><option value="Mt.">Mt. (Metre)</option><option value="Kg">Kg</option><option value="M²">M²</option><option value="Lt.">Lt. (Litre)</option><option value="Pk.">Pk. (Paket)</option></select></div>
+        <div class="form-group"><label>💰 Birim Fiyat - TL</label><input type="number" id="editUnitPrice" step="0.01" required></div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 20px;"><button type="button" class="btn btn-danger btn-large" onclick="closeEditCostRowModal()">İptal</button><button type="submit" class="btn btn-primary btn-large">Kaydet</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="addRowToGroupModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2>➕ Gruba Malzeme Ekle</h2><button class="close-modal" onclick="closeAddRowToGroupModal()">&times;</button></div>
+      <form id="addRowToGroupForm">
+        <input type="hidden" id="addToGroupIndex">
+        <div style="background: #e7f5ff; padding: 10px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #0c5460;"><strong style="color: #0c5460;">Grup: </strong><span id="addToGroupName" style="color: #667eea; font-weight: 600;"></span></div>
+        <div class="form-group"><label>📦 Malzemenin Adı</label><input type="text" id="addToGroupMaterialName" required placeholder="Örn: Kabin Rayı, Halat..."></div>
+        <div class="form-group"><label>🏷️ Ürün Markası</label><input type="text" id="addToGroupBrand" placeholder="Marka adı (opsiyonel)"></div>
+        <div class="form-group"><label>📝 Ürün Özelliği</label><textarea id="addToGroupFeature" rows="2" placeholder="Model, özellik vb. (opsiyonel)"></textarea></div>
+        <div class="form-group"><label>🔢 Miktar</label><input type="number" id="addToGroupQuantity" step="0.01" value="1" required></div>
+        <div class="form-group"><label>📏 Birim</label><select id="addToGroupUnit"><option value="Ad.">Ad. (Adet)</option><option value="Takım">Takım</option><option value="Mt.">Mt. (Metre)</option><option value="Kg">Kg</option><option value="M²">M²</option><option value="Lt.">Lt. (Litre)</option><option value="Pk.">Pk. (Paket)</option></select></div>
+        <div class="form-group"><label>💰 Birim Fiyat - TL</label><input type="number" id="addToGroupUnitPrice" step="0.01" required placeholder="0.00"></div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 20px;"><button type="button" class="btn btn-danger btn-large" onclick="closeAddRowToGroupModal()">İptal</button><button type="submit" class="btn btn-primary btn-large">Ekle</button></div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let priceData = { motor: [], kumanda: [], kabin: [], ray: [], kapilar: [], buton: [], halat: [], agirlik: [], tamamlayici: [] };
+    let quotationData = { customer: {}, technical: {}, products: { motor:null, kumanda:null, kabin:null, ray:null, kapilar:null, buton:null, halat:null, agirlik:null, tamamlayici:null } };
+    let currentEditCategory = '', currentEditIndex = -1;
+
+    function loadData() { const s = localStorage.getItem('elevatorPriceDataV23'); if(s) priceData = JSON.parse(s); }
+    function saveData() { localStorage.setItem('elevatorPriceDataV23', JSON.stringify(priceData)); }
+
+    function showMainSection(s) { document.querySelectorAll('.menu-btn').forEach(b=>b.classList.remove('active')); event.target.classList.add('active'); document.getElementById('priceListSection').classList.remove('active'); document.getElementById('quotationSection').classList.remove('active'); document.getElementById(s+'Section').classList.add('active'); }
+    function showTab(t) { document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active')); event.target.classList.add('active'); document.getElementById(t+'Tab').classList.add('active'); if(t!=='all') renderProducts(t); }
+    function showAlert(m,t) { const a=document.getElementById('alert'); a.className='alert show alert-'+t; a.textContent=m; setTimeout(()=>a.classList.remove('show'),3000); }
+
+    function downloadBackup() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(priceData)); const el = document.createElement('a'); el.setAttribute("href", dataStr); el.setAttribute("download", "asansor_verileri.json"); document.body.appendChild(el); el.click(); el.remove(); }
+    function uploadBackup(input) { const f = input.files[0]; if(!f) return; const r = new FileReader(); r.onload = function(e) { try { priceData = JSON.parse(e.target.result); saveData(); location.reload(); } catch(err) { alert('Hatalı dosya!'); } }; r.readAsText(f); }
+
+    async function handleFileUpload(cat, inp) {
+      const f = inp.files[0]; if(!f) return; const ext = f.name.split('.').pop().toLowerCase();
+      try {
+        let txt = '';
+        if(ext === 'pdf') { const buf = await f.arrayBuffer(); const pdf = await pdfjsLib.getDocument(buf).promise; for(let i=1; i<=pdf.numPages; i++){ const p=await pdf.getPage(i); const t=await p.getTextContent(); txt+=t.items.map(x=>x.str).join(' ')+'\n'; } }
+        else if(ext === 'xls' || ext === 'xlsx') { const buf = await f.arrayBuffer(); const wb = XLSX.read(buf, {type:'array'}); const sheet = wb.Sheets[wb.SheetNames[0]]; txt = XLSX.utils.sheet_to_csv(sheet); }
+        else { alert('Format desteklenmiyor'); return; }
+        const arr = parseContent(cat, txt);
+        if(arr.length){ priceData[cat]=priceData[cat].concat(arr); saveData(); showAlert('Eklendi','success'); renderProducts(cat); } else { alert('Veri bulunamadı.'); }
+      } catch(e){ console.error(e); alert('Hata oluştu.'); } inp.value='';
+    }
+
+    function parseContent(cat, txt) {
+      const rows = txt.split('\n').map(r => r.split(/[,;\t]/)); if (rows.length === 0) return [];
+      const headers = rows[0].map(h => String(h).toLowerCase().trim());
+      const map = {}; let isSmart = false;
+      const keywords = { 'brand': ['marka', 'brand'], 'model': ['model', 'tip'], 'price': ['fiyat', 'tl'], 'ropeThickness': ['halat kalınlığı', 'çap'], 'ropeCount': ['halat sayısı', 'adet'], 'pulley': ['kasnak'], 'power': ['güç', 'kw'], 'speed': ['hız', 'm/sn'], 'capacity': ['kapasite', 'kg'], 'driveType': ['tahrik', 'makine', 'sistem'] };
+      for (let i = 0; i < headers.length; i++) { for (const k in keywords) { if (keywords[k].some(x => headers[i].includes(x))) { map[k] = i; isSmart = true; } } }
+      const results = []; const startRow = isSmart ? 1 : 0;
+      for (let i = startRow; i < rows.length; i++) {
+        const row = rows[i]; if (row.length < 2 || row.every(cell => !cell || String(cell).trim() === '')) continue;
+        let item = { discount: 0 };
+        if (isSmart) { for (const key in map) { if (row[map[key]] !== undefined) item[key] = cleanValue(row[map[key]]); } }
+        else { if(cat === 'motor') { item.brand=row[0]; item.model=row[1]; item.capacity=row[2]; item.speed=row[3]; item.power=row[4]; item.driveType=row[5]; item.pulley=row[6]; item.ropeCount=row[7]; item.ropeThickness=row[8]; item.price=cleanPrice(row[9]); } else { item.brand=row[0]; item.model=row[1]; item.price=cleanPrice(row[row.length-1]); } }
+        if(cat === 'ray' && item.price) { item.rayMainPrice = item.price; item.rayWeightPrice = 0; }
+        if (item.brand || item.price) results.push(item);
+      }
+      return results;
+    }
+
+    function cleanValue(val) { return val ? String(val).trim() : ''; }
+    function cleanPrice(val) { if(!val) return 0; let s = String(val).replace(/[^0-9.,]/g, ''); if(s.includes('.') && s.includes(',')) s = s.replace(/\./g, '').replace(',', '.'); else if(s.includes(',')) s = s.replace(',', '.'); return parseFloat(s) || 0; }
+
+    function nextStep(s) {
+      document.querySelectorAll('.wizard-step').forEach(x=>x.classList.remove('active')); document.getElementById('q-step'+s).classList.add('active');
+      document.querySelectorAll('.step-indicator').forEach((x,i)=>{ if(i+1<s)x.className='step-indicator completed'; else if(i+1===s)x.className='step-indicator active'; else x.className='step-indicator'; });
+      if(s===2) { const sel=document.getElementById('techStops'); if(sel.options.length===0) for(let i=2;i<=24;i++){const o=document.createElement('option'); o.value=i+' Durak'; o.text=i+' Durak'; sel.appendChild(o);} }
+      if(s===3) populateProductDropdowns();
+    }
+    function prevStep(s) { document.querySelectorAll('.wizard-step').forEach(x=>x.classList.remove('active')); document.getElementById('q-step'+s).classList.add('active'); document.querySelectorAll('.step-indicator').forEach((x,i)=>{ if(i+1===s)x.className='step-indicator active'; else if(i+1>s)x.className='step-indicator'; }); }
+    
+    function populateProductDropdowns() {
+      ['kumanda','kabin','ray','kapilar','buton','halat','agirlik','tamamlayici'].forEach(cat => {
+        const sel = document.getElementById('select-'+cat); sel.innerHTML = '<option value="">Seçiniz...</option>';
+        if(priceData[cat]) {
+            const addedBrands = new Set();
+            priceData[cat].forEach((p,i) => { 
+                if(!addedBrands.has(p.brand)) {
+                    const o = document.createElement('option'); o.value = i; o.text = p.brand; sel.appendChild(o);
+                    addedBrands.add(p.brand);
+                }
+            });
+        }
+      });
+
+      const motorSel = document.getElementById('select-motor');
+      motorSel.innerHTML = '<option value="">Önce Marka...</option>';
+      if(priceData.motor) {
+          const addedBrands = new Set();
+          priceData.motor.forEach((p) => {
+              if(p.brand && !addedBrands.has(p.brand)) {
+                  const o = document.createElement('option'); o.value = p.brand; o.text = p.brand; motorSel.appendChild(o);
+                  addedBrands.add(p.brand);
+              }
+          });
+      }
+    }
+
+    function filterMotorModels(selectedBrand) {
+        const modelSel = document.getElementById('select-motor-model');
+        modelSel.innerHTML = '<option value="">Seçiniz...</option>';
+        modelSel.disabled = true;
+        modelSel.style.background = "#f0f0f0";
+
+        if(!selectedBrand) return;
+
+        const reqCap = cleanPrice(document.getElementById('techCapacity').value);
+        const reqSpeed = cleanPrice(document.getElementById('techSpeed').value);
+        const reqType = document.getElementById('techType').value.toUpperCase(); 
+
+        const matches = [];
+        priceData.motor.forEach((m, index) => {
+            if(m.brand === selectedBrand) {
+                const mCap = cleanPrice(m.capacity);
+                const mSpeed = cleanPrice(m.speed);
+                const mType = (m.driveType || '').toUpperCase();
+
+                if(mCap === reqCap && mSpeed === reqSpeed && mType.includes(reqType)) {
+                    matches.push({index: index, text: `${m.model} - ${m.capacity} - ${m.speed}`});
+                }
+            }
+        });
+
+        if(matches.length > 0) {
+            modelSel.disabled = false;
+            modelSel.style.background = "#fff";
+            matches.forEach(m => {
+                const o = document.createElement('option'); o.value = m.index; o.text = m.text; modelSel.appendChild(o);
+            });
+        } else {
+            const o = document.createElement('option'); o.text = "Uygun kriterde motor bulunamadı!"; modelSel.appendChild(o);
+        }
+    }
+
+    function updateQuoteProduct(cat, idx) { quotationData.products[cat] = idx===""?null:parseInt(idx); }
+    
+    function addManualProduct(cat) { currentEditCategory=cat; currentEditIndex=-1; document.getElementById('editForm').reset(); configureModal(cat); document.getElementById('editModal').style.display='block'; }
+    
+    function editProduct(cat, i) {
+      currentEditCategory=cat; currentEditIndex=i; const p=priceData[cat][i];
+      document.getElementById('editBrand').value=p.brand||''; document.getElementById('editModel').value=p.model||'';
+      document.getElementById('editPrice').value=p.price||''; document.getElementById('editDiscount').value=p.discount||0;
+      configureModal(cat);
+      if(cat==='motor'){ document.getElementById('motorCapacity').value=p.capacity||''; document.getElementById('motorSpeed').value=p.speed||''; document.getElementById('motorPower').value=p.power||''; document.getElementById('motorDriveType').value=p.driveType||''; document.getElementById('motorPulley').value=p.pulley||''; document.getElementById('motorRopeCount').value=p.ropeCount||''; document.getElementById('motorRopeThickness').value=p.ropeThickness||''; }
+      if(cat==='ray') {
+        document.getElementById('rayMainPrice').value = p.rayMainPrice || '';
+        document.getElementById('rayWeightPrice').value = p.rayWeightPrice || '';
+        document.getElementById('rayMainFeature').value = p.rayMainFeature || '';
+        document.getElementById('rayWeightFeature').value = p.rayWeightFeature || '';
+      }
+      if(cat==='tamamlayici') {
+          document.getElementById('tamamlayiciName').value = p.tamamlayiciName || '';
+          document.getElementById('tamamlayiciFeature').value = p.tamamlayiciFeature || '';
+      }
+      document.getElementById('editModal').style.display='block';
+    }
+
+    function configureModal(cat) {
+      document.querySelectorAll('.category-fields').forEach(e=>e.classList.remove('active'));
+      
+      const commonModel = document.getElementById('commonModelField');
+      if(cat==='kabin' || cat==='ray' || cat==='tamamlayici') commonModel.style.display='none'; 
+      else { commonModel.style.display='block'; document.querySelector('#commonModelField label').innerText = '📝 Model / Açıklama'; }
+
+      if(cat==='ray' || cat==='kapilar') document.getElementById('commonPriceField').style.display='none'; 
+      else document.getElementById('commonPriceField').style.display='block';
+      
+      const f = document.getElementById(cat+'Fields'); if(f) f.classList.add('active');
+    }
+
+    function closeEditModal(){ document.getElementById('editModal').style.display='none'; }
+    
+    document.getElementById('editForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const p = { brand: document.getElementById('editBrand').value, model: document.getElementById('editModel').value, price: parseFloat(document.getElementById('editPrice').value)||0, discount: parseFloat(document.getElementById('editDiscount').value)||0 };
+      if(currentEditCategory==='motor'){ p.capacity=document.getElementById('motorCapacity').value; p.speed=document.getElementById('motorSpeed').value; p.power=document.getElementById('motorPower').value; p.driveType=document.getElementById('motorDriveType').value; p.pulley=document.getElementById('motorPulley').value; p.ropeCount=document.getElementById('motorRopeCount').value; p.ropeThickness=document.getElementById('motorRopeThickness').value; }
+      if(currentEditCategory==='ray') {
+         p.rayMainPrice = parseFloat(document.getElementById('rayMainPrice').value) || 0;
+         p.rayWeightPrice = parseFloat(document.getElementById('rayWeightPrice').value) || 0;
+         p.rayMainFeature = document.getElementById('rayMainFeature').value;
+         p.rayWeightFeature = document.getElementById('rayWeightFeature').value;
+         p.price = 0; p.model = `${p.rayMainFeature} / ${p.rayWeightFeature}`;
+      }
+      if(currentEditCategory==='tamamlayici') {
+          p.tamamlayiciName = document.getElementById('tamamlayiciName').value;
+          p.tamamlayiciFeature = document.getElementById('tamamlayiciFeature').value;
+          p.model = `${p.tamamlayiciName} - ${p.tamamlayiciFeature}`;
+      }
+
+      if(currentEditIndex>=0) priceData[currentEditCategory][currentEditIndex]=p; else priceData[currentEditCategory].push(p);
+      saveData(); renderProducts(currentEditCategory); closeEditModal();
+    });
+
+    function copyProduct(cat, i) { const p=JSON.parse(JSON.stringify(priceData[cat][i])); if(cat!=='kabin')p.model+=' (Kopya)'; priceData[cat].push(p); saveData(); renderProducts(cat); showAlert('Kopyalandı','success'); }
+    function deleteProduct(cat, i) { if(confirm('Sil?')){ priceData[cat].splice(i,1); saveData(); renderProducts(cat); } }
+    function updateDiscount(cat, i, val) { priceData[cat][i].discount=parseFloat(val)||0; saveData(); renderProducts(cat); }
+    
+    function renderProducts(cat) {
+      const c = document.getElementById(cat+'Products'); const l = priceData[cat];
+      if(!l || l.length===0){ c.innerHTML='<p style="text-align:center;color:#999">Veri yok</p>'; return; }
+      let h = '<div class="product-grid">';
+      l.forEach((p,i)=>{
+        let displayPriceHTML = '', headerPrice = '';
+        if(cat==='ray') {
+            const mainP = p.rayMainPrice || 0; const weightP = p.rayWeightPrice || 0;
+            const mainNet = mainP * (1 - (p.discount || 0) / 100); const weightNet = weightP * (1 - (p.discount || 0) / 100);
+            headerPrice = '<span style="font-size:12px; color:#444;">Çift Fiyatlı</span>';
+            displayPriceHTML = `<div style="background:#f8f9fa; padding:10px; border-radius:5px; margin:10px 0; text-align:left;">
+                    <div style="margin-bottom:8px; border-bottom:1px solid #ddd; padding-bottom:5px;">
+                        <div style="font-size:13px; font-weight:bold; color:#667eea;">🟦 Kabin Rayı</div><div style="font-size:12px;">${p.rayMainFeature || '-'}</div>
+                        <div style="display:flex; justify-content:space-between; margin-top:2px;"><span>${mainP.toLocaleString('tr-TR')} TL</span><span style="color:#28a745; font-weight:bold;">➡ ${mainNet.toLocaleString('tr-TR')} TL</span></div>
+                    </div>
+                    <div>
+                        <div style="font-size:13px; font-weight:bold; color:#6c757d;">⚖️ Ağırlık Rayı</div><div style="font-size:12px;">${p.rayWeightFeature || '-'}</div>
+                        <div style="display:flex; justify-content:space-between; margin-top:2px;"><span>${weightP.toLocaleString('tr-TR')} TL</span><span style="color:#28a745; font-weight:bold;">➡ ${weightNet.toLocaleString('tr-TR')} TL</span></div>
+                    </div></div>`;
+        } else {
+            let pr = p.price||0; if(cat==='kapilar') pr=(p.priceLanding||0)+(p.priceCar||0);
+            const net = pr*(1-(p.discount||0)/100); headerPrice = `<span>${pr.toLocaleString('tr-TR')} TL</span>`;
+            displayPriceHTML = `<div class="discounted-price">${net.toLocaleString('tr-TR')} TL</div>`;
+        }
+        let det=''; if(cat==='motor') det=`<span>${p.power||''} / ${p.speed||''} / ${p.driveType||''}</span><br><span style="font-size:11px">Kasnak: ${p.pulley||'-'} / Halat: ${p.ropeCount||'-'}x${p.ropeThickness||'-'}</span>`;
+        if(cat!=='ray') det += `<div style="font-size:13px; color:#666; margin-bottom:10px;">${p.model||''}</div>`;
+        
+        if(cat==='tamamlayici') {
+            det = `<div style="font-size:14px; font-weight:bold; color:#333; margin-bottom:5px;">${p.tamamlayiciName || ''}</div>
+                   <div style="font-size:12px; color:#666; margin-bottom:10px;">${p.tamamlayiciFeature || ''}</div>`;
+        }
+
+        h+=`<div class="product-card"><div class="product-card-header"><span>${p.brand}</span>${headerPrice}</div>${det}<div class="discount-control"><label>İskonto %</label><input type="number" value="${p.discount||0}" onchange="updateDiscount('${cat}',${i},this.value)"></div>${displayPriceHTML}<div style="margin-top:10px;text-align:right"><button class="btn btn-warning" onclick="editProduct('${cat}',${i})">✏️</button><button class="btn btn-primary" onclick="copyProduct('${cat}',${i})">📄</button><button class="btn btn-danger" onclick="deleteProduct('${cat}',${i})">🗑️</button></div></div>`;
+      });
+      c.innerHTML=h+'</div>';
+    }
+
+    // === MALİYET TABLOSU FONKSİYONLARI ===
+    let costTableData = [];
+    // İSİM STANDARDI: V44 - ÖNCEKİ MANTIK KORUNDU
+    const defaultMaterialsList = [
+      { group: 'RAY', items: [{ name: 'Kabin Rayı', unit: 'Mt.' }, { name: 'Ağırlık Rayı', unit: 'Mt.' }, { name: 'Ağirlik Ray Flanşi', unit: 'Ad.' }, { name: 'Kabin ray flanşı', unit: 'Ad.' }, { name: 'Kabin ray konsolu', unit: 'Ad.' }, { name: 'Ağirlik ray Konsolu', unit: 'Ad.' }, { name: 'Kabin Ray tırnağı', unit: 'Ad.' }, { name: 'Ağirlik ray Tirnaği', unit: 'Ad.' }, { name: 'Çelik dubel', unit: 'Ad.' }, { name: 'Ray Mastarı', unit: 'Ad.' }, { name: 'İp Atma Pofili', unit: 'Mt.' }, { name: 'İskele', unit: 'Mt.' } ]},
+      { group: 'MOTOR', items: [{ name: 'Asansör Motoru', unit: 'Ad.' }, { name: 'Motor Bağlantı Kablosu', unit: 'Mt.' }, { name: 'Makine Şasesi', unit: 'Ad.' }, { name: 'Motor Bağlantı Vidası', unit: 'Ad.' } ]},
+      { group: 'KAPI', items: [{ name: 'Kapı Kiriş Profili', unit: 'Mt.' }, { name: 'Kat Kapısı', unit: 'Ad.' }, { name: 'Otomatik Kabin kapısı', unit: 'Ad.' } ]},
+      { group: 'HALAT', items: [{ name: 'Halat Etiketi', unit: 'Ad.' }, { name: 'Regülator Halatı', unit: 'Ad.' }, { name: 'Regülator Halat Klemnesi', unit: 'Ad.' }, { name: 'Asansör Halatı', unit: 'Mt.' }, { name: 'Halat şişesi', unit: 'Ad.' }, { name: 'Halat klemensi', unit: 'Ad.' }, { name: 'Halat Tutucu Klemens', unit: 'Ad.' } ]},
+      { group: 'KABİN', items: [{ name: 'Asansör kabini', unit: 'Ad.' }, { name: 'Yağdanlık  kabin', unit: 'Ad.' }, { name: 'Yağ Toplama Kabı', unit: 'Ad.' }, { name: 'Kabin Aynası', unit: 'Ad.' }, { name: 'Kabin Tamponu', unit: 'Ad.' }, { name: 'Tampon Plakası ( Alt )', unit: 'Ad.' }, { name: 'Tampon Plakası (Üst)', unit: 'Ad.' } ]},
+      { group: 'PANO', items: [{ name: 'Kumanda Panosu', unit: 'Ad.' }, { name: 'Kata Getirici', unit: 'Ad.' }, { name: 'Otm.kapı kartı', unit: 'Ad.' }, { name: 'Revizyon kutusu', unit: 'Ad.' }, { name: 'Revizyon Ktusu Bağl.Aprt.', unit: 'Ad.' }, { name: 'Besleme Panosu', unit: 'Ad.' } ]},
+      { group: 'KABLO', items: [{ name: 'Kablo kanalı', unit: 'Mt.' }, { name: 'NYAF kablo 0,75mm', unit: 'Mt.' }, { name: 'NYA kablo   4/6 mm', unit: 'Mt.' }, { name: 'Topraklama Kablosu', unit: 'Mt.' }, { name: 'Kuyu Dibi Bağlantı Kablosu 18 Nakil', unit: 'Ad.' }, { name: 'D,jital kablo', unit: 'Mt.' }, { name: 'Flexible-32 nakil', unit: 'Mt.' }, { name: 'Flexible takozu', unit: 'Ad.' }, { name: 'Kablo Klemensi', unit: 'Ad.' }, { name: 'Kablo Bağı 1 büyük, 2 küçük', unit: 'Pk.' }, { name: 'Kablo Papucu 1 mm', unit: 'Ad.' }, { name: 'Kablo Papucu 5 mm', unit: 'Ad.' }, { name: 'Delikli Papuç 6 mm', unit: 'Ad.' }, { name: 'İzole Bant', unit: 'Ad.' }, { name: 'Sac Kanal', unit: 'Mt.' }, { name: 'Klipsli Plastik Dubel', unit: 'Ad.' }, { name: 'Kuyu Dibi Kablosu 18 Nakil', unit: 'Ad.' }, { name: 'Sipiral Hortum 14 mm', unit: 'Mt.' }, { name: 'Sipiral Hortum 18 mm', unit: 'Mt.' } ]},
+      { group: 'KASET', items: [{ name: 'Kabin kaseti', unit: 'Ad.' }, { name: 'Kat kaseti', unit: 'Ad.' } ]},
+      { group: 'DİĞER', items: [{ name: 'Kuyu Merdiveni', unit: 'Mt.' }, { name: 'Mantar stop kutulu', unit: 'Ad.' }, { name: 'Kesici Siviç', unit: 'Ad.' }, { name: 'Kesici Swiç Vida Som.', unit: 'Ad.' }, { name: 'Kesici Lama', unit: 'Ad.' }, { name: 'Hız Regülatoru', unit: 'Ad.' }, { name: 'Fotosel', unit: 'Ad.' }, { name: 'Kat Etiketi', unit: 'Ad.' }, { name: 'Kullanma Talımatı', unit: 'Ad.' }, { name: 'Kapasite Etiketi', unit: 'Ad.' }, { name: 'Mak. Dairesi Etiketi', unit: 'Ad.' }, { name: 'Bakım talimatı', unit: 'Ad.' }, { name: 'Kesmetaşı', unit: 'Ad.' }, { name: 'Elektrot', unit: 'Ad.' }, { name: 'Proje', unit: 'Ad.' }, { name: 'Sevkiyat', unit: 'Ad.' }, { name: 'Kuyu Aydınlatma Kablosu', unit: 'Mt.' }, { name: 'kuyu aydınlatma Lambası', unit: 'Ad.' }, { name: 'K.Dibi Elektrik Seti', unit: 'Ad.' }, { name: 'Üstüpü', unit: 'Ad.' } ]}
+    ];
+
+    function loadDefaultMaterials() {
+      if (costTableData.length > 0) if (!confirm('Mevcut tablo silinecek. Devam etmek istiyor musunuz?')) return;
+      costTableData = [];
+      
+      const seyir = parseFloat(document.getElementById('techDistance').value) || 0;
+      const sonKat = parseFloat(document.getElementById('techTop').value) || 0;
+      const kuyuDibi = parseFloat(document.getElementById('techPit').value) || 0;
+      const stopsVal = document.getElementById('techStops').value; 
+      const stopCount = parseInt(stopsVal) || 0;
+      
+      const capStr = document.getElementById('techCapacity').value; 
+      const speedStr = document.getElementById('techSpeed').value;
+      const capacity = parseInt(capStr) || 0;
+      const speed = parseFloat(speedStr.replace(',', '.')) || 0;
+
+      const rayToplam = ((seyir + sonKat + kuyuDibi) * 2) / 1000; 
+      const rayMiktar = Math.ceil(rayToplam / 5) * 5;
+
+      const konsolAdet = Math.ceil(rayMiktar / 1.5); 
+      const t3Adet = konsolAdet * 2; 
+      const t1Adet = konsolAdet * 2; 
+      const dubelAdet = (t3Adet + t1Adet) + (stopCount * 5); 
+
+      const getSelectedProduct = (cat) => {
+        const idx = quotationData.products[cat];
+        if (idx !== null && idx !== undefined && priceData[cat] && priceData[cat][idx]) {
+            return priceData[cat][idx];
+        }
+        if(cat === 'ray' && (idx === null || idx === undefined) && priceData[cat] && priceData[cat].length > 0) {
+             return priceData[cat][0]; 
+        }
+        return { brand: 'Seçilmedi', price: 0 };
+      };
+
+      const selRay = getSelectedProduct('ray');
+      const selMotor = getSelectedProduct('motor');
+      
+      const selKumanda = getSelectedProduct('kumanda');
+      const selKabin = getSelectedProduct('kabin');
+      const selKapilar = getSelectedProduct('kapilar');
+      const selButon = getSelectedProduct('buton');
+      const selHalat = getSelectedProduct('halat');
+      const selAgirlik = getSelectedProduct('agirlik');
+      const selTamamlayici = getSelectedProduct('tamamlayici');
+
+      let autoMainFeat = "";
+      let autoWeightFeat = "";
+
+      if (speed <= 1.0) {
+          if (capacity >= 320 && capacity <= 630) { autoMainFeat = "70x65x9 mm"; autoWeightFeat = "50x50x5 mm"; } 
+          else if (capacity >= 800 && capacity <= 1000) { autoMainFeat = "89x62x16 mm"; autoWeightFeat = "50x50x5 mm"; } 
+          else if (capacity >= 1250 && capacity <= 1600) { autoMainFeat = "90x75x16 mm"; autoWeightFeat = "70x65x9 mm"; }
+      } else {
+          if (capacity >= 320 && capacity <= 630) { autoMainFeat = "89x62x16 mm"; autoWeightFeat = "50x50x5 mm"; } 
+          else if (capacity >= 800 && capacity <= 1000) { autoMainFeat = "90x75x16 mm"; autoWeightFeat = "70x65x9 mm"; } 
+          else if (capacity >= 1250 && capacity <= 1600) { autoMainFeat = "125x82x16 mm"; autoWeightFeat = "89x62x16 mm"; }
+      }
+
+      if(!autoMainFeat) autoMainFeat = selRay.rayMainFeature || 'Belirsiz';
+      if(!autoWeightFeat) autoWeightFeat = selRay.rayWeightFeature || 'Belirsiz';
+
+      const refRay = { 
+          brand: selRay.brand, 
+          mainPrice: selRay.rayMainPrice || 0, 
+          weightPrice: selRay.rayWeightPrice || 0, 
+          mainFeat: autoMainFeat, 
+          weightFeat: autoWeightFeat 
+      };
+      
+      const oracleItems = ['Kabin ray konsolu', 'Ağirlik ray Konsolu', 'Kabin Ray tırnağı', 'Ağirlik ray Tirnaği', 'Çelik dubel', 'Ray Mastarı', 'İp Atma Pofili', 'İskele', 'Makine Şasesi', 'Motor Bağlantı Kablosu'];
+      const getFlangeSize = (str) => { const num = parseInt(str); return num ? num + " lik Flanş" : ""; };
+      const getClipType = (railFeat) => {
+          if(!railFeat) return "T3";
+          if(railFeat.startsWith("50")) return "T1";
+          if(railFeat.startsWith("70")) return "T2";
+          if(railFeat.startsWith("89") || railFeat.startsWith("90")) return "T3";
+          if(railFeat.startsWith("125")) return "T4";
+          return "T3";
+      };
+
+      // V44 YENİLİĞİ: TÜRKÇE KARAKTER DUYARLI ARAMA (Eski isimlerle uyumlu)
+      const findComplementary = (name) => {
+          if(!priceData.tamamlayici) return null;
+          return priceData.tamamlayici.find(p => p.tamamlayiciName && p.tamamlayiciName.trim().toLocaleLowerCase('tr') === name.trim().toLocaleLowerCase('tr'));
+      };
+
+      defaultMaterialsList.forEach(category => {
+        costTableData.push({ isGroup: true, name: category.group });
+        
+        let groupBrand = '';
+        if(category.group === 'MOTOR') groupBrand = selMotor.brand;
+        else if(category.group === 'PANO') groupBrand = selKumanda.brand;
+        else if(category.group === 'KABİN') groupBrand = selKabin.brand;
+        else if(category.group === 'KAPI') groupBrand = selKapilar.brand;
+        else if(category.group === 'KASET') groupBrand = selButon.brand;
+        else if(category.group === 'HALAT') groupBrand = selHalat.brand;
+        else if(category.group === 'DİĞER') groupBrand = selAgirlik.brand || selTamamlayici.brand;
+
+        category.items.forEach(item => {
+          let quantity = 0, brand = groupBrand, feature = '', unitPrice = 0;
+          
+          const compItem = findComplementary(item.name);
+          let foundInComp = false;
+          let dbPrice = 0;
+          let dbBrand = '';
+          let dbFeature = '';
+
+          if (compItem) {
+              dbPrice = (compItem.price || 0) * (1 - (compItem.discount || 0) / 100);
+              dbBrand = compItem.brand;
+              dbFeature = compItem.tamamlayiciFeature;
+              foundInComp = true;
+          }
+
+          if (item.name === 'Kabin Rayı') {
+            quantity = rayMiktar; 
+            brand = refRay.brand; feature = refRay.mainFeat; unitPrice = refRay.mainPrice;
+          } else if (item.name === 'Ağırlık Rayı') {
+            quantity = rayMiktar; brand = refRay.brand; feature = refRay.weightFeat; unitPrice = refRay.weightPrice;
+          } else if (item.name === 'Kabin ray flanşı') {
+            quantity = rayMiktar / 5; brand = refRay.brand; feature = getFlangeSize(refRay.mainFeat);
+          } else if (item.name === 'Ağirlik Ray Flanşi') {
+            quantity = rayMiktar / 5; brand = refRay.brand; feature = getFlangeSize(refRay.weightFeat);
+          } 
+          
+          else if (item.name === 'Kabin ray konsolu') {
+             quantity = konsolAdet; 
+             if(foundInComp) { unitPrice = dbPrice; brand = dbBrand; feature = dbFeature; }
+             else { brand = 'Oracle'; feature = 'Standart'; unitPrice = 0; }
+          }
+          else if (item.name === 'Ağirlik ray Konsolu') {
+             quantity = konsolAdet; 
+             if(foundInComp) { unitPrice = dbPrice; brand = dbBrand; feature = dbFeature; }
+             else { brand = 'Oracle'; feature = 'Standart'; unitPrice = 0; }
+          }
+          else if (item.name === 'Kabin Ray tırnağı') {
+             quantity = t3Adet;
+             // V44: DB Fiyatı Al, Özelliği Hesapla Birleştir
+             if(foundInComp) { 
+                 unitPrice = dbPrice; 
+                 brand = dbBrand; 
+                 feature = `${dbFeature} (${getClipType(refRay.mainFeat)})`; 
+             } else { 
+                 feature = getClipType(refRay.mainFeat); brand = 'Oracle'; unitPrice = 0; 
+             }
+          }
+          else if (item.name === 'Ağirlik ray Tirnaği') {
+             quantity = t1Adet;
+             if(foundInComp) { 
+                 unitPrice = dbPrice; brand = dbBrand; 
+                 feature = `${dbFeature} (${getClipType(refRay.weightFeat)})`; 
+             } else { 
+                 feature = getClipType(refRay.weightFeat); brand = 'Oracle'; unitPrice = 0; 
+             }
+          }
+          else if (item.name === 'Çelik dubel') {
+             quantity = dubelAdet;
+             if(foundInComp) { unitPrice = dbPrice; brand = dbBrand; feature = dbFeature; }
+             else { brand = 'Oracle'; feature = 'M10-M12 Çelik'; unitPrice = 0; }
+          }
+          else if (item.name === 'İp Atma Pofili') {
+             quantity = 1; 
+             if(foundInComp) { unitPrice = dbPrice; brand = dbBrand; feature = dbFeature; }
+             else { brand = 'Oracle'; feature = '40*40*3'; unitPrice = 0; }
+          }
+          else if (oracleItems.includes(item.name)) {
+             quantity = 1;
+             if(foundInComp) { unitPrice = dbPrice; brand = dbBrand; feature = dbFeature; }
+             else { brand = 'Oracle'; feature = '40*40*3'; unitPrice = 0; }
+          } 
+          else {
+             quantity = 1;
+             if(category.group === 'MOTOR' && item.name === 'Asansör Motoru') {
+                 unitPrice = (selMotor.price || 0) * (1 - (selMotor.discount||0)/100);
+                 feature = `${selMotor.model || ''} / ${selMotor.capacity || ''} / ${selMotor.speed || ''}`;
+                 brand = selMotor.brand;
+             }
+          }
+          
+          costTableData.push({ isGroup: false, name: '  ' + item.name, brand: brand, feature: feature, quantity: quantity, unit: item.unit, unitPrice: unitPrice, total: quantity * unitPrice });
+        });
+      });
+      renderCostTable();
+    }
+
+    function addManualCostRow() { document.getElementById('manualRowForm').reset(); document.getElementById('manualRowModal').style.display = 'block'; }
+    function closeManualRowModal() { document.getElementById('manualRowModal').style.display = 'none'; }
+    function addGroupRow() { document.getElementById('groupRowForm').reset(); document.getElementById('groupRowModal').style.display = 'block'; }
+    function closeGroupRowModal() { document.getElementById('groupRowModal').style.display = 'none'; }
+    document.getElementById('manualRowForm').addEventListener('submit', function(e) { e.preventDefault(); const quantity = parseFloat(document.getElementById('manualQuantity').value) || 1; const unitPrice = parseFloat(document.getElementById('manualUnitPrice').value) || 0; costTableData.push({ isGroup: false, name: '  ' + document.getElementById('manualMaterialName').value, brand: document.getElementById('manualBrand').value || '', feature: document.getElementById('manualFeature').value || '', quantity: quantity, unit: document.getElementById('manualUnit').value, unitPrice: unitPrice, total: quantity * unitPrice }); renderCostTable(); closeManualRowModal(); showAlert('Malzeme eklendi!', 'success'); });
+    document.getElementById('groupRowForm').addEventListener('submit', function(e) { e.preventDefault(); costTableData.push({ isGroup: true, name: document.getElementById('groupName').value.toUpperCase() }); renderCostTable(); closeGroupRowModal(); showAlert('Grup başlığı eklendi!', 'success'); });
+    function editCostRow(index) { const row = costTableData[index]; if (row.isGroup) return; document.getElementById('editRowIndex').value = index; document.getElementById('editMaterialName').value = row.name.trim(); document.getElementById('editBrandName').value = row.brand || ''; document.getElementById('editFeature').value = row.feature || ''; document.getElementById('editQuantity').value = row.quantity; document.getElementById('editUnit').value = row.unit; document.getElementById('editUnitPrice').value = row.unitPrice; document.getElementById('editCostRowModal').style.display = 'block'; }
+    function closeEditCostRowModal() { document.getElementById('editCostRowModal').style.display = 'none'; }
+    document.getElementById('editCostRowForm').addEventListener('submit', function(e) { e.preventDefault(); const index = parseInt(document.getElementById('editRowIndex').value); const quantity = parseFloat(document.getElementById('editQuantity').value) || 0; const unitPrice = parseFloat(document.getElementById('editUnitPrice').value) || 0; costTableData[index] = { isGroup: false, name: '  ' + document.getElementById('editMaterialName').value, brand: document.getElementById('editBrandName').value || '', feature: document.getElementById('editFeature').value || '', quantity: quantity, unit: document.getElementById('editUnit').value, unitPrice: unitPrice, total: quantity * unitPrice }; renderCostTable(); closeEditCostRowModal(); showAlert('Malzeme güncellendi!', 'success'); });
+    function addRowToGroup(groupIndex) { const group = costTableData[groupIndex]; if (!group.isGroup) return; document.getElementById('addToGroupIndex').value = groupIndex; document.getElementById('addToGroupName').textContent = group.name; document.getElementById('addRowToGroupForm').reset(); document.getElementById('addRowToGroupModal').style.display = 'block'; }
+    function closeAddRowToGroupModal() { document.getElementById('addRowToGroupModal').style.display = 'none'; }
+    document.getElementById('addRowToGroupForm').addEventListener('submit', function(e) { e.preventDefault(); const groupIndex = parseInt(document.getElementById('addToGroupIndex').value); const quantity = parseFloat(document.getElementById('addToGroupQuantity').value) || 1; const unitPrice = parseFloat(document.getElementById('addToGroupUnitPrice').value) || 0; const newRow = { isGroup: false, name: '  ' + document.getElementById('addToGroupMaterialName').value, brand: document.getElementById('addToGroupBrand').value || '', feature: document.getElementById('addToGroupFeature').value || '', quantity: quantity, unit: document.getElementById('addToGroupUnit').value, unitPrice: unitPrice, total: quantity * unitPrice }; let insertIndex = groupIndex + 1; while (insertIndex < costTableData.length && !costTableData[insertIndex].isGroup) { insertIndex++; } costTableData.splice(insertIndex, 0, newRow); renderCostTable(); closeAddRowToGroupModal(); showAlert('Malzeme gruba eklendi!', 'success'); });
+    function clearCostTable() { if (confirm('Tüm satırları silmek istediğinize emin misiniz?')) { costTableData = []; renderCostTable(); showAlert('Tablo temizlendi', 'success'); } }
+    function deleteCostRow(index) { if (confirm('Bu satırı silmek istediğinize emin misiniz?')) { costTableData.splice(index, 1); renderCostTable(); } }
+    function calculateTotals() {
+      let materialTotal = 0; costTableData.forEach(row => { if (!row.isGroup) materialTotal += row.total || 0; });
+      const overheadPercent = parseFloat(document.getElementById('overheadPercent').value) || 0; const overheadAmount = materialTotal * (overheadPercent / 100);
+      const generalCost = materialTotal + overheadAmount; const profitPercent = parseFloat(document.getElementById('profitPercent').value) || 0; const profitAmount = generalCost * (profitPercent / 100);
+      const quotationPrice = generalCost + profitAmount; const roundedQuotation = Math.ceil(quotationPrice / 100) * 100;
+      document.getElementById('totalCost').textContent = materialTotal.toLocaleString('tr-TR', {minimumFractionDigits: 2}) + ' TL';
+      document.getElementById('overheadAmount').textContent = overheadAmount.toLocaleString('tr-TR', {minimumFractionDigits: 2}) + ' TL';
+      document.getElementById('generalCost').textContent = generalCost.toLocaleString('tr-TR', {minimumFractionDigits: 2}) + ' TL';
+      document.getElementById('profitAmount').textContent = profitAmount.toLocaleString('tr-TR', {minimumFractionDigits: 2}) + ' TL';
+      document.getElementById('quotationPrice').textContent = roundedQuotation.toLocaleString('tr-TR', {minimumFractionDigits: 2}) + ' TL';
+    }
+    function renderCostTable() {
+      const tbody = document.getElementById('costTableBody'); if (costTableData.length === 0) { tbody.innerHTML = `<tr><td colspan="8" style="padding: 40px; text-align: center; color: #999;">Tabloya malzeme eklemek için yukarıdaki butonları kullanın</td></tr>`; document.getElementById('itemCount').textContent = '0'; calculateTotals(); return; }
+      let html = ''; let itemCount = 0;
+      costTableData.forEach((row, index) => {
+        if (row.isGroup) { html += `<tr style="background: #f8f9fa; border-top: 2px solid #667eea; border-bottom: 2px solid #667eea;"><td style="padding: 12px; border: 1px solid #dee2e6; font-weight: bold; color: #667eea; font-size: 15px;" colspan="7">${row.name}</td><td style="padding: 8px; text-align: center; border: 1px solid #dee2e6;"><button class="btn btn-primary" onclick="addRowToGroup(${index})" style="padding: 5px 10px; margin-right: 3px;" title="Bu gruba satır ekle">➕</button><button class="btn btn-danger" onclick="deleteCostRow(${index})" style="padding: 5px 10px;" title="Grubu sil">🗑️</button></td></tr>`; } 
+        else { itemCount++; html += `<tr style="border-bottom: 1px solid #e9ecef;"><td style="padding: 8px; border: 1px solid #e9ecef;">${row.name}</td><td style="padding: 8px; border: 1px solid #e9ecef; font-size: 13px; color: #495057; font-weight: 500;">${row.brand || ''}</td><td style="padding: 8px; border: 1px solid #e9ecef; font-size: 13px; color: #6c757d;">${row.feature || ''}</td><td style="padding: 8px; text-align: center; border: 1px solid #e9ecef; font-weight: 600;">${row.quantity}</td><td style="padding: 8px; text-align: center; border: 1px solid #e9ecef;">${row.unit}</td><td style="padding: 8px; text-align: right; border: 1px solid #e9ecef;">${row.unitPrice.toLocaleString('tr-TR', {minimumFractionDigits: 2})} TL</td><td style="padding: 8px; text-align: right; border: 1px solid #e9ecef; font-weight: 600; background: #f8f9fa;">${row.total.toLocaleString('tr-TR', {minimumFractionDigits: 2})} TL</td><td style="padding: 8px; text-align: center; border: 1px solid #e9ecef;"><button class="btn btn-warning" onclick="editCostRow(${index})" style="padding: 5px 10px; margin-right: 3px;" title="Düzenle">✏️</button><button class="btn btn-danger" onclick="deleteCostRow(${index})" style="padding: 5px 10px;" title="Sil">🗑️</button></td></tr>`; }
+      });
+      tbody.innerHTML = html; document.getElementById('itemCount').textContent = itemCount; calculateTotals();
+    }
+    function finishQuotation() { if (costTableData.length === 0) { alert('Lütfen önce maliyet tablosuna satır ekleyin!'); return; } alert('Teklif tamamlandı! (PDF oluşturma özelliği eklenecek)'); }
+    window.onload = () => { loadData(); renderProducts('motor'); };
+  </script>
+</body>
+</html>
